@@ -11,20 +11,183 @@
 #include <string>
 #include <cstring>
 #include <pthread.h>
+#include <iostream>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sstream>
+#include <arpa/inet.h>
+#include <unordered_map>
+#include <map>
+#include <queue>
+#include <vector>
 
+using namespace std;
+
+unordered_map<string,string> KV_DATASTORE;
+
+void handle_read(int sclientid, istringstream& streamstring) {
+    string input;
+    streamstring >> input;
+
+    auto it = KV_DATASTORE.find(input);
+	if (it == KV_DATASTORE.end()) {
+		const char *sendd = "NULL\n";
+		write(sclientid, sendd, strlen(sendd));
+	}
+	
+	else {
+		const char *sendd = (it->second + "\n").c_str();
+		write(sclientid, sendd, strlen(sendd));
+	}
+}
+
+void handle_write(int sclientid, istringstream& streamstring) {
+    string key, value;
+
+    streamstring >> key >> value;
+    value = value.substr(1);
+
+    KV_DATASTORE[key] = value;
+
+    const char *sendd = "FIN\n";
+
+    write(sclientid, sendd, strlen(sendd));
+}
+
+void handle_count(int sclientid) {
+    int count = KV_DATASTORE.size();
+
+    string se = to_string(count) + "\n";
+
+    write(sclientid, se.c_str(), se.length());
+}
+
+void handle_delete(int sclientid, istringstream& streamstring) {
+    string input;
+    streamstring >> input;
+
+    auto it = KV_DATASTORE.find(input);
+    const char* sendd;
+
+    if (it == KV_DATASTORE.end()) {
+        sendd = "NULL\n";
+    }
+	
+	else {
+        KV_DATASTORE.erase(it);
+        sendd = "FIN\n";
+    }
+
+    write(sclientid, sendd, strlen(sendd));
+}
+
+void handle_end(int sclientid) {
+    write(sclientid, "\n", 1);
+    close(sclientid);
+}
+
+void handle_all(int sclientid) {
+    constexpr size_t streamSize = 2048;
+    char sstream[streamSize];
+    string strip = "";
+    string input;
+
+    while (true) {
+        memset(sstream, 0, streamSize);
+        ssize_t bytesRead = read(sclientid, sstream, streamSize-1);
+        if (bytesRead <= 0) {
+            break;
+        }
+		istringstream streamstring(strip + (string)sstream);
+
+        while (true) {
+            streamstring >> input;
+            if (input == "READ") {
+                handle_read(sclientid, streamstring);
+            }
+			
+			else if (input == "WRITE") {
+                handle_write(sclientid, streamstring);
+            }
+			
+			else if (input == "COUNT") {
+                handle_count(sclientid);
+            }
+			
+			else if (input == "DELETE") {
+                handle_delete(sclientid, streamstring);
+            }
+			
+			else if (input == "END") {
+                handle_end(sclientid);
+                return;
+            }
+			
+			else {
+                if (streamstring.str().empty()) {
+                    strip = input;
+                    break;
+                }
+            }
+
+            if (streamstring.str().empty()) {
+                strip = "";
+                break;
+            }
+        }
+    }
+	
+	close(sclientid);
+}
 
 int main(int argc, char ** argv) {
-  int portno; /* port to listen on */
-  
-  /* 
-   * check command line arguments 
-   */
-  if (argc != 2) {
-    fprintf(stderr, "usage: %s <port>\n", argv[0]);
-    exit(1);
-  }
+	
+	int portno;
+	if (argc != 2) {
+		fprintf(stderr, "usage: %s <port>\n", argv[0]);
+		exit(1);
+	}
 
-  // DONE: Server port number taken as command line argument
-  portno = atoi(argv[1]);
+	// DONE: Server port number taken as command line argument
+	portno = atoi(argv[1]);
+	  
+    struct sockaddr_in serverAddress;
+    memset(&serverAddress, 0, sizeof(serverAddress));
+
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(portno);
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    
+    int ssockid = socket(AF_INET, SOCK_STREAM, 0);
+    if (ssockid < 0) {
+    	cerr << "Error creating" << endl;
+    	exit(0);
+    }
+    
+    if(bind(ssockid, (struct sockaddr*) &serverAddress, sizeof(serverAddress)) < 0) {
+    	cerr << "Error binding"<<endl;
+    	exit(0);
+    }
+	
+	if(listen(ssockid, 100) < 0) {
+        cerr << "Error listening"<<endl;
+        exit(0);
+    }
+
+    while(true==true) {
+        int sclientid;
+        struct sockaddr_in clientAddress;
+        socklen_t sclientlen = sizeof(clientAddress);
+        
+        sclientid = accept(ssockid, (struct sockaddr*) &clientAddress, &sclientlen);
+        if(sclientid < 0) {
+            cerr << "Error accepting from client"<<endl;
+            continue;
+        }
+
+        handle_all(sclientid);
+    }
+
+    close(ssockid);
 
 }
