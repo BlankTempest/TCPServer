@@ -65,7 +65,9 @@ int main(int argc, char **argv)
             continue;
         }
 
-        handle_all(sclientid);
+        Serial::Server server;
+
+        server.handle_all(sclientid);
     }
 
     close(ssockid);
