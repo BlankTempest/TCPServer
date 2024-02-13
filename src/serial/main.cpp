@@ -8,8 +8,6 @@
 
 #include "serial.hpp"
 
-using namespace std;
-
 int main(int argc, char **argv)
 {
 
@@ -35,19 +33,19 @@ int main(int argc, char **argv)
 
     if (ssockid < 0)
     {
-        cerr << "Error creating" << endl;
+        std::cerr << "Error creating" << std::endl;
         exit(0);
     }
 
     if (bind(ssockid, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
     {
-        cerr << "Error binding" << endl;
+        std::cerr << "Error binding" << std::endl;
         exit(0);
     }
 
     if (listen(ssockid, 100) < 0)
     {
-        cerr << "Error listening" << endl;
+        std::cerr << "Error listening" << std::endl;
         exit(0);
     }
 
@@ -61,7 +59,7 @@ int main(int argc, char **argv)
         sclientid = accept(ssockid, (struct sockaddr *)&clientAddress, &sclientlen);
         if (sclientid < 0)
         {
-            cerr << "Error accepting from client" << endl;
+            std::cerr << "Error accepting from client" << std::endl;
             continue;
         }
 

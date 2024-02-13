@@ -8,7 +8,35 @@
 
 #include "parallel.hpp"
 
-using namespace std;
+Parallel::Server server;
+
+void *threader(void *john_smith)
+    {
+
+        john_smith = NULL;
+
+        while (true == true)
+        {
+
+            int sclientid;
+
+            pthread_mutex_lock(&server.mutex_queue);
+
+            while (server.client_queue.empty())
+            {
+                pthread_cond_wait(&server.cond, &server.mutex_queue);
+            }
+
+            sclientid = server.client_queue.front();
+            server.client_queue.pop();
+
+            pthread_mutex_unlock(&server.mutex_queue);
+
+            server.handle_all(sclientid);
+        }
+
+        return NULL;
+    }
 
 int main(int argc, char **argv)
 {
@@ -33,7 +61,7 @@ int main(int argc, char **argv)
     int ssockid = socket(AF_INET, SOCK_STREAM, 0);
     if (ssockid < 0)
     {
-        cerr << "Error creating" << endl;
+        std::cerr << "Error creating" << std::endl;
         exit(1);
     }
 
@@ -42,19 +70,19 @@ int main(int argc, char **argv)
 
     if (bind(ssockid, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
     {
-        cerr << "Error binding" << endl;
+        std::cerr << "Error binding" << std::endl;
         exit(1);
     }
 
     if (listen(ssockid, maxcons) < 0)
     {
-        cerr << "Error listening" << endl;
+        std::cerr << "Error listening" << std::endl;
         exit(1);
     }
 
     for (int i = 0; i < threadCount; i++)
     {
-        pthread_create(&pool_threads[i], NULL, threader, NULL);
+        pthread_create(&server.pool_threads[i], NULL, threader, NULL);
     }
 
     while (true == true)
@@ -66,19 +94,19 @@ int main(int argc, char **argv)
         sclientid = accept(ssockid, (struct sockaddr *)&clientAddress, &sclientlen);
         if (sclientid < 0)
         {
-            cerr << "Error accepting from client" << endl;
+            std::cerr << "Error accepting from client" << std::endl;
             continue;
         }
 
         // handle_all(sclientid);
-        pthread_mutex_lock(&mutex_queue);
-        client_queue.push(sclientid);
-        pthread_cond_signal(&cond);
-        pthread_mutex_unlock(&mutex_queue);
+        pthread_mutex_lock(&server.mutex_queue);
+        server.client_queue.push(sclientid);
+        pthread_cond_signal(&server.cond);
+        pthread_mutex_unlock(&server.mutex_queue);
     }
 
     close(ssockid);
-    cleanup();
+    server.cleanup();
 
     return 0;
 }
