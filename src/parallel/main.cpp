@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         struct sockaddr_in clientAddress;
         socklen_t sclientlen = sizeof(clientAddress);
 
-        sclientid = accept(ssockid, (struct sockaddr *)&clientAddress, &sclientlen);
+        sclientid = accept(ssockid, (struct sockaddr*)&clientAddress, &sclientlen);
         if (sclientid < 0)
         {
             std::cerr << "Error accepting from client" << std::endl;

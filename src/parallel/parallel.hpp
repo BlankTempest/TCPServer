@@ -14,8 +14,8 @@
 #include <vector>
 #include <csignal>
 
-#define threadCount 10
-#define maxcons 100
+constexpr int threadCount = 10;
+constexpr int maxcons = 100;
 
 namespace Parallel 
 {
@@ -35,16 +35,16 @@ namespace Parallel
 
                 pthread_mutex_lock(&mutex_dict);
 
-                auto it = KV_DATASTORE.find(input);
+                std::unordered_map<std::string, std::string>::iterator it = KV_DATASTORE.find(input);
                 if (it == KV_DATASTORE.end())
                 {
-                    const char *msg = "NULL\n";
+                    auto *msg = "NULL\n";
                     write(sclientid, msg, strlen(msg));
                 }
 
                 else
                 {
-                    const char *msg = (it->second + "\n").c_str();
+                    auto *msg = (it->second + "\n").c_str();
                     write(sclientid, msg, strlen(msg));
                 }
 
@@ -66,7 +66,7 @@ namespace Parallel
 
                 pthread_mutex_unlock(&mutex_dict);
 
-                const char *msg = "FIN\n";
+                auto *msg = "FIN\n";
 
                 write(sclientid, msg, strlen(msg));
 
@@ -78,13 +78,15 @@ namespace Parallel
 
                 pthread_mutex_lock(&mutex_dict);
 
-                int count = KV_DATASTORE.size();
+                auto count = KV_DATASTORE.size();
 
                 pthread_mutex_unlock(&mutex_dict);
 
-                std::string se = std::to_string(count) + "\n";
+                auto se = std::to_string(count) + "\n";
 
-                write(sclientid, se.c_str(), se.length());
+                auto len = se.length();
+
+                write(sclientid, se.c_str(), len);
 
                 return;
             }
@@ -96,7 +98,7 @@ namespace Parallel
 
                 pthread_mutex_lock(&mutex_dict);
 
-                auto it = KV_DATASTORE.find(input);
+                std::unordered_map<std::string, std::string>::iterator it = KV_DATASTORE.find(input);
                 const char *msg;
 
                 if (it == KV_DATASTORE.end())
@@ -104,10 +106,10 @@ namespace Parallel
                     msg = "NULL\n";
                 }
 
-                else
+                if (it != KV_DATASTORE.end())
                 {
-                    KV_DATASTORE.erase(it);
                     msg = "FIN\n";
+                    KV_DATASTORE.erase(it);
                 }
 
                 pthread_mutex_unlock(&mutex_dict);
@@ -128,17 +130,6 @@ namespace Parallel
             Operations operation;
 
         public:
-            Server() {
-                /*
-                for (int i = 0; i < threadCount; i++)
-                {
-                    pthread_create(&server.pool_threads[i], NULL, threader, NULL);
-                }
-                */
-            }
-            ~Server() {
-                //cleanup();
-            }
 
             void enqueuer(int ele)
             {
@@ -170,8 +161,8 @@ namespace Parallel
             {
                 constexpr size_t streamSize = 2048;
                 char sstream[streamSize];
-                std::string strip = "";
                 std::string input;
+                std::string strip = "";
 
                 while (true)
                 {
@@ -181,7 +172,8 @@ namespace Parallel
                     {
                         break;
                     }
-                    std::istringstream streamstring(strip + (std::string)sstream);
+                    std::istringstream streamstring;
+                    streamstring.str((std::string)sstream+strip);
 
                     Operations operation;
 
@@ -194,10 +186,9 @@ namespace Parallel
                         if (flag == 1) {
                             break;
                         }
-                        if(flag == 2) {
+                        else if(flag == 2) {
                             return;
                         }
-
                         if (streamstring.str().empty())
                         {
                             strip = "";

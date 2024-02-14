@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         exit(0);
     }
 
-    if (bind(ssockid, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
+    if (bind(ssockid, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
     {
         std::cerr << "Error binding" << std::endl;
         exit(0);

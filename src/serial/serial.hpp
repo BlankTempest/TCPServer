@@ -14,8 +14,8 @@
 #include <vector>
 #include <csignal>
 
-#define tCount 10
-#define maxcons 100
+constexpr int tCount = 10;
+constexpr int maxcons = 100;
 
 // queue<int> client_queue;
 //unordered_map<string, string> KV_DATASTORE;
@@ -35,16 +35,16 @@ namespace Serial
                 std::string input;
                 streamstring >> input;
 
-                auto it = KV_DATASTORE.find(input);
+                std::unordered_map<std::string, std::string>::iterator it = KV_DATASTORE.find(input);
                 if (it == KV_DATASTORE.end())
                 {
-                    const char *msg = "NULL\n";
+                    auto *msg = "NULL\n";
                     write(sclientid, msg, strlen(msg));
                 }
 
                 else
                 {
-                    const char *msg = (it->second + "\n").c_str();
+                    auto *msg = (it->second + "\n").c_str();
                     write(sclientid, msg, strlen(msg));
                 }
 
@@ -61,7 +61,7 @@ namespace Serial
 
                 KV_DATASTORE[key] = value;
 
-                const char *msg = "FIN\n";
+                auto *msg = "FIN\n";
 
                 write(sclientid, msg, strlen(msg));
 
@@ -71,11 +71,13 @@ namespace Serial
             void handle_count(int sclientid)
             {
 
-                int count = KV_DATASTORE.size();
+                auto count = KV_DATASTORE.size();
 
-                std::string se = std::to_string(count) + "\n";
+                auto se = std::to_string(count) + "\n";
 
-                write(sclientid, se.c_str(), se.length());
+                auto len = se.length();
+
+                write(sclientid, se.c_str(), len);
 
                 return;
             }
@@ -86,7 +88,7 @@ namespace Serial
                 std::string input;
                 streamstring >> input;
 
-                auto it = KV_DATASTORE.find(input);
+                std::unordered_map<std::string, std::string>::iterator it = KV_DATASTORE.find(input);
                 const char *msg;
 
                 if (it == KV_DATASTORE.end())
@@ -94,10 +96,10 @@ namespace Serial
                     msg = "NULL\n";
                 }
 
-                else
+                if (it != KV_DATASTORE.end())
                 {
-                    KV_DATASTORE.erase(it);
                     msg = "FIN\n";
+                    KV_DATASTORE.erase(it);
                 }
 
                 write(sclientid, msg, strlen(msg));
@@ -123,8 +125,8 @@ namespace Serial
 
                 constexpr size_t streamSize = 2048;
                 char sstream[streamSize];
-                std::string strip = "";
                 std::string input;
+                std::string strip = "";
 
                 Operations operation;
 
@@ -139,7 +141,8 @@ namespace Serial
                         break;
                     }
 
-                    std::istringstream streamstring(strip + (std::string)sstream);
+                    std::istringstream streamstring;
+                    streamstring.str((std::string)sstream+strip);
 
                     while (true)
                     {
@@ -151,7 +154,7 @@ namespace Serial
                         if (flag == 1) {
                             break;
                         }
-                        if(flag == 2) {
+                        else if(flag == 2) {
                             return;
                         }
 
